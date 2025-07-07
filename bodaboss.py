@@ -40,7 +40,7 @@ upload_button = st.sidebar.file_uploader(":file_uploader: Upload a file", type =
 if upload_button is not None: 
     filename = upload_button.name
     st.write(filename)
-    df = pd.read_csv(upload_button, encode = "ISO-8859-1")
+    df = pd.read_csv(upload_button, encoding = "ISO-8859-1")
 else:
     default_file = ""
     if os.path.exists(default_file):
@@ -52,6 +52,9 @@ else:
 
 # Detecting Categorical Variables
 categorical_cols = [col for col in df.columns if df[col].unique() < 20 and df[col].dtype == "object"]
+
+# Variable to hold filtered selection 
+filtered_selection = {}
 
 # Date pickers
 
@@ -86,6 +89,9 @@ with col2:
             🟩 Column 2 (Main Content)
         </div>
     """, unsafe_allow_html=True)
+
+    with st.expander("Raw Unfiltered Data: {filename}")
+        st.write(df)
     
 
 # Column 3 → no borders
