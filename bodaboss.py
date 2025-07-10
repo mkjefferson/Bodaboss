@@ -78,6 +78,7 @@ with col1:
 
 # Column 2 → right border only
 with col2:
+   
     st.write(f"Everything comes here")
     st.markdown("""
         <div style='
@@ -90,7 +91,7 @@ with col2:
         </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("Raw Unfiltered Data: {filename}")
+    with st.expander("Raw Unfiltered Data: {filename}"):
         st.write(df)
     
 
