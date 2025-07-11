@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd 
 import numpy as np 
+from datetime import timedelta
 import os 
 import plotly.express as px
 import colorsys
@@ -34,6 +35,34 @@ st.markdown("""
             
 """, unsafe_allow_html = True
 )
+# Score Card Design
+st.markdown("""
+<style>
+.metric-box{
+        background-color: ;
+        padding: 0.0rem;
+        margin: 0.1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0px 2px 6px rgba(0,0,0,5);
+        text-align: center;
+        font-family: 'Segoe UI', sans-serif;
+        
+}
+.metric-box h2{
+        margin: -1rem;
+        padding-top: 0 rem;
+            
+}     
+.metric-box h5{
+    margin: 0rem;
+
+}      
+
+</style>
+""", unsafe_allow_html = True)
+
+
+
 upload_button = st.sidebar.file_uploader(":file_uploader: Upload a file", type = (["xls","txt","csv","xlsx"]))
 
 # condition for if a user uploads a file
@@ -51,101 +80,130 @@ else:
 
 
 # Detecting Categorical Variables
-# categorical_cols = [col for col in df.columns if df[col].unique() < 20 and df[col].dtype == "object"]
-
+categorical_cols = [col for col in df.select_dtypes(include=["object", "category"]).columns if df[col].nunique(dropna = True) <= 52 ]
 # Variable to hold filtered selection 
 filtered_selection = {}
-col1, col2, col3 = st.columns([1, 3.5, 1])
 
-with col2:
     # Date pickers
-    filtered_df = df.copy()
-    date_col = None
-    for col in df.columns:
-        if df[col].dtype in ['object', 'datetime64[ns]']:
-            try:
-                converted = pd.datetime(df[col], errors = 'coerce', infer_datetime_format = True)
-                # Require at lead 50% of the values to be valid dates
-                if converted.notna().mean() > 0.5:
-                    df[col] = converted
-                    date_col = col
-                    break
-            except Exception as e:
-                continue
-    # Fall back to Year column if no proper date time is found
-    if date_col is None and 'Year' in df.columns:
+filtered_df = df.copy()
+date_col = None
+for col in df.columns:
+    if df[col].dtype in ['object', 'datetime64[ns]']:
         try:
-            df['Year'] = pd.to_datetime(df['Year'], format = '%Y', errors = 'coerce')
-            if df['Year'].notna().sum() > 0:
-                date_col = 'Year'
-                df = df.dropna(subset = ['Year'])
-                # st.markdown("***Fallback to 'Year' column for date filtering")
+            converted = pd.to_datetime(df[col], errors = 'coerce', infer_datetime_format = True)
+            # Require at lead 50% of the values to be valid dates
+            if converted.notna().mean() > 0.5:
+                df[col] = converted
+                date_col = col
+                break
         except Exception as e:
-            pass
-    colA, colB, colC = st.columns([1,1,1])
-    with colA:
-        if date_col:
-            # st.markdown(f"**Date Column Detected: ** `{date_col}`")
-            # Drop the rows where date parsing failed 
-            df = df.dropna(subset = [date_col])
+            continue
+# Fall back to Year column if no proper date time is found
+if date_col is None and 'Year' in df.columns:
+    try:
+        df['Year'] = pd.to_datetime(df['Year'], format = '%Y', errors = 'coerce')
+        if df['Year'].notna().sum() > 0:
+            date_col = 'Year'
+            df = df.dropna(subset = ['Year'])
+            # st.markdown("***Fallback to 'Year' column for date filtering")
+    except Exception as e:
+        pass
+col1, col2, col3 = st.columns(3)
+with col1: 
+    if date_col:
+        # st.markdown(f"**Date Column Detected: ** `{date_col}`")
+        # Drop the rows where date parsing failed 
+        df = df.dropna(subset = [date_col])
 
-            # Get the actual min and max date
-            startDate = df[date_col].min().date()
-            endDate = df[date_col].max().date()
+        # Get the actual min and max date
+        startDate = df[date_col].min().date()
+        endDate = df[date_col].max().date()
 
-            # Displaying the date pickers with the data's date range
-            date1 = st.date_input('Start Date', startDate, min_value = startDate, max_value = endDate)
-            date2 = st.date_input('End Date', endDate, min_value = startDate, max_value = endDate)
-        else:
-            st.warning("No Valid date in the file date detected")
+        # Displaying the date pickers with the data's date range
+        date1 = st.date_input('Start Date', startDate, min_value = startDate, max_value = endDate)
+        date2 = st.date_input('End Date', endDate, min_value = startDate, max_value = endDate)
 
-        # Define the layout with 3 columns
+        # Filter the dataframe based on the selected date 
+        mask = (df[date_col].dt.date >= date1) & (df[date_col].dt.date <= date2)
+        filtered_df = df.loc[mask]
+    else:
+        st.warning("No Valid date in the file date detected")    
 
-
-# # Column 1 → right border only
-# with col1:
-#     # st.write(f"Everything comes here")
-#     # st.markdown("""
-#     #     <div style='
-#     #         border-right: 3px solid red;
-#     #         height: 100vh;
-#     #         padding: 10px;
-#     #         box-sizing: border-box;
-#     #     '>
-#     #         🟥 Column 1
-#     #     </div>
-#     # """, unsafe_allow_html=True)
-
-# # Column 2 → right border only
 with col2:
-    with st.expander(f"Raw Unfiltered Data: {filename}."):
-        st.write(df)   
-    # st.write(f"Everything comes here")
-    # st.markdown("""
-    #     <div style='
-    #         border-right: 3px solid blue;
-    #         height: 100vh;
-    #         padding: 10px;
-    #         box-sizing: border-box;
-    #     '>
-    #         🟩 Column 2 (Main Content)
-    #     </div>
-    # """, unsafe_allow_html=True)
+    for col in categorical_cols:
+        filtered_selection[col] = st.multiselect(
+        f"Select: {col}",
+        options = filtered_df[col].unique()
+        )
 
+    for col, selection in filtered_selection.items():
+        if selection:
+            filtered_df = filtered_df[filtered_df[col].isin(selection)]
+with col3:
+    categorical_cols2 = [col for col in df.select_dtypes(include=["object", "category"]).columns if df[col].nunique(dropna = True) <= 2]
+    for col in categorical_cols2:
+        filtered_selection[col] = st.multiselect(
+            f"Select {col}",
+            options = filtered_df[col].unique()
+        )
 
+        if selection: 
+            filtered_df = filtered_df[filtered_df[col].isin(selection)]
+
+total_sales = filtered_df['SALES'].sum() if 'SALES' in filtered_df.columns else 0
+cog = filtered_df['COG'].sum() if 'COG' in filtered_df.columns else 0
+profits = total_sales - cog
+total_qty = filtered_df['QTY'].sum() if 'QTY' in filtered_df.columns else 0
+roi =  (profits/cog)*100    
+colA1, colB1, colC1, colD1, colE1 = st.columns(5)
+with colA1:
+        st.markdown(f"""
+        <div class = "metric-box">
+            <h4>Sales</h4>
+            <h2>Ksh. {total_sales:,.2f}</h2>
+            <p></p> 
+        </div>
+        """, unsafe_allow_html = True)
+
+with colB1:
+    st.markdown(f"""
+    <div class = "metric-box">
+        <h4>COG</h4>
+        <h2>{cog:,.2f}</h2>
+        <p></p>
+    </div>
+    """, unsafe_allow_html = True)
+with colC1:
+    st.markdown(f"""
+    <div class = "metric-box">
+        <h4>Profits</h4>
+        <h2>Ksh. {profits:,.2f}</h2>
+        <p></p>
+    </div>
     
+    """, unsafe_allow_html = True)
 
-# # Column 3 → no borders
-# with col3:
-#     # st.write(f"Everything comes here")
-#     # st.markdown("""
-#     #     <div style='
-#     #         height: 100vh;
-#     #         padding: 10px;
-#     #         box-sizing: border-box;
-#     #     '>
-#     #         🟦 Column 3
-#     #     </div>
-#     # """, unsafe_allow_html=True)
+with colD1:
+    st.markdown(f"""
+    <div class = "metric-box">
+        <h4>QTY</h4>
+        <h2>{total_qty}</h2>
+        <p></p>
+    </div> 
+    """, unsafe_allow_html = True)
+
+with colE1:
+    st.markdown(f"""
+    <div class = "metric-box">
+        <h4>ROI</h4>
+        <h2>{roi:,.2f}%</h2>
+        <p></p>
+    </div>
     
+    """, unsafe_allow_html = True)
 
+with st.expander(f"Raw Unfiltered Data: {filename}."):
+        st.write(df) 
+with st.expander(f"Filtered Data "):
+        st.write(filtered_df) 
+ 
