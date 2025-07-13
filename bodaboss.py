@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd 
 import numpy as np 
 from datetime import timedelta
+from datetime import date
 import os 
 import plotly.express as px
 import colorsys
@@ -80,7 +81,7 @@ else:
 
 
 # Detecting Categorical Variables
-categorical_cols = [col for col in df.select_dtypes(include=["object", "category"]).columns if df[col].nunique(dropna = True) <= 52 ]
+categorical_cols = [col for col in df.select_dtypes(include=["object", "category"]).columns if 20 <= df[col].nunique(dropna = True) <= 52 ]
 # Variable to hold filtered selection 
 filtered_selection = {}
 
@@ -146,7 +147,7 @@ with col3:
             f"Select {col}",
             options = filtered_df[col].unique()
         )
-
+    for col, selection in filtered_selection.items():
         if selection: 
             filtered_df = filtered_df[filtered_df[col].isin(selection)]
 
@@ -202,6 +203,116 @@ with colE1:
     
     """, unsafe_allow_html = True)
 
+colAA, colAB, colAC = st.columns(3)
+
+st.markdown("""
+<style>
+  .infographics-box{
+        background-color:;
+        padding: 12rem;
+        margin: 1rem; 
+        box-shadow: 0px 2px 6px rgba(0,0,0,5);
+        border-radius: 12px;     
+            
+    }          
+           
+</style>
+""", unsafe_allow_html = True)
+st.markdown("""
+<style>
+  .calender{
+        background-color:;
+        padding: 12rem;
+        margin: 1rem; 
+        box-shadow: 0px 2px 6px rgba(0,0,0,5);
+        border-radius: 12px;
+        display: flex; 
+        flex-direction: column;
+        align-items: center;     
+            
+    }
+    .calendar-header {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #1f2e4d;
+        margin-bottom: 1rem;
+    }
+    [data-testid="stDateInput"] {
+        width: 100%;
+        text-align: center;
+    }         
+           
+</style>
+""", unsafe_allow_html = True)
+st.markdown("""
+<style>
+  .line-graph{
+        background-color:;
+        padding: 12rem;
+        margin: 1rem; 
+        box-shadow: 0px 2px 6px rgba(0,0,0,5);
+        border-radius: 12px;     
+            
+    }          
+           
+</style>
+""", unsafe_allow_html = True)
+
+colBB, colCC, colDD = st.columns([1, 2, 1])
+with colBB:
+    st.markdown('<div class = "calender">', unsafe_allow_html = True)
+    # selected_date = st.date_input("Pick a date", value = date.today(), key = "calendar_input")
+    st.markdown('</div', unsafe_allow_html = True)
+with colCC:
+    st.markdown("""
+    <div class = "line-graph">
+    
+                
+    </div>
+    
+    """, unsafe_allow_html = True)
+with colDD: 
+    st.markdown("""
+    <div class = "infographics-box">
+    
+                
+    </div>
+    
+    """, unsafe_allow_html = True)
+colBBB, colCCC, colDDD, colEEE = st.columns(4)
+
+with colBBB:
+    st.markdown("""
+    <div class = "infographics-box">
+    
+                
+                
+    </div>
+    """, unsafe_allow_html = True)
+with colCCC:
+        st.markdown("""
+    <div class = "infographics-box">
+    
+                
+                
+    </div>
+    """, unsafe_allow_html = True)
+with colDDD:
+         st.markdown("""
+    <div class = "infographics-box">
+    
+                
+                
+    </div>
+    """, unsafe_allow_html = True)
+with colEEE:
+         st.markdown("""
+    <div class = "infographics-box">
+    
+                
+                
+    </div>
+    """, unsafe_allow_html = True)
 with st.expander(f"Raw Unfiltered Data: {filename}."):
         st.write(df) 
 with st.expander(f"Filtered Data "):
