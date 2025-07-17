@@ -6,6 +6,8 @@ from datetime import date
 import os 
 import plotly.express as px
 import colorsys
+import streamlit.components.v1 as components
+import plotly.io as pio
 import warnings 
 warnings.filterwarnings('ignore')
 
@@ -150,6 +152,26 @@ with col3:
     for col, selection in filtered_selection.items():
         if selection: 
             filtered_df = filtered_df[filtered_df[col].isin(selection)]
+# Detecting numeric columns in the filtered data
+numeric_columns = filtered_df.select_dtypes(include = ['int64', 'float64']).columns
+
+# Creating options for the numeric column filter 
+numeric_column_options = ["-- Select a numeric column --"] + list(numeric_columns)
+
+# Sidebar Filter to filter according to numeric column 
+st.sidebar.subheader("Select a Numeric Column to Display")
+numeric_col_selected = st.sidebar.selectbox(
+     "Choose a Numeric Column",
+     numeric_column_options
+)
+
+# Enabling the Numeric Column to Filter the data 
+if numeric_col_selected != "-- Select a numeric column --":
+    #  Get data for the categorical columns that were selected and the numeric column selected 
+    active_cat_filters = [col for col, values in filtered_selection.items() if values]
+    columns_to_display = active_cat_filters + [numeric_col_selected]
+
+    display_df = filtered_df[columns_to_display]
 
 total_sales = filtered_df['SALES'].sum() if 'SALES' in filtered_df.columns else 0
 cog = filtered_df['COG'].sum() if 'COG' in filtered_df.columns else 0
@@ -244,33 +266,87 @@ st.markdown("""
            
 </style>
 """, unsafe_allow_html = True)
-st.markdown("""
-<style>
-  .line-graph{
-        background-color:;
-        padding: 12rem;
-        margin: 1rem; 
-        box-shadow: 0px 2px 6px rgba(0,0,0,5);
-        border-radius: 12px;     
-            
-    }          
-           
-</style>
-""", unsafe_allow_html = True)
+
 
 colBB, colCC, colDD = st.columns([1, 2, 1])
 with colBB:
     st.markdown('<div class = "calender">', unsafe_allow_html = True)
-    # selected_date = st.date_input("Pick a date", value = date.today(), key = "calendar_input")
+    # Only create a chart if numeric column is selected
+    if numeric_col_selected != "-- Select a numeric column --":
+         if active_cat_filters:
+              group_col = active_cat_filters[0]
+              chart_data = (
+                   filtered_df
+                   .groupby(group_col)[numeric_col_selected]
+                   .sum()
+                   .reset_index()
+                )
+
     st.markdown('</div', unsafe_allow_html = True)
 with colCC:
-    st.markdown("""
-    <div class = "line-graph">
-    
+    with st.container():
+    # with container2:
+        if numeric_col_selected != "-- Select a numeric column --":
+            if date_col and date_col in filtered_df.columns:
+                if filtered_df[date_col].dtype != 'datetime64[ns]':
+                    filtered_df[date_col] = pd.to_datetime(filtered_df[date_col], errors = 'coerce')
+                    filtered_df = filtered_df.dropna(subset = [date_col])
+
+                    #   Aggregating the selected numeric column by Date 
+                time_series_data = (
+                    filtered_df
+                    .groupby(date_col)[numeric_col_selected]
+                    .sum()
+                    .reset_index()
+                )
                 
-    </div>
-    
-    """, unsafe_allow_html = True)
+                fig_time = px.line(
+                    time_series_data,
+                    x = date_col,
+                    y = numeric_col_selected,
+                    title = f"Time Series Chart for {numeric_col_selected}"
+                )
+                fig_time.update_traces(line=dict(color = '#FF5800'))
+                # Generate HTML for the plotly figure
+                plot_html = fig_time.to_html(full_html = False, include_plotlyjs = 'inline')
+
+                # Render the figure inside the styled box 
+                components.html(f"""
+                    <div class = "line-graph">
+                        {plot_html}
+                    </div>
+                    <style>
+                        .line-graph{{
+                            background-color:;
+                            padding: 0;
+                            margin: 0rem; 
+                            box-shadow: 0px 2px 6px rgba(0,0,0,2);
+                            border-radius: 12px; 
+                            max-width: 860px;
+                        }} 
+                        </style>
+                """, height = 800)
+
+                # st.markdown('<div class = "line-graph">',unsafe_allow_html = True)
+                # st.markdown("""
+                # <style>
+                # .line-graph{
+                #         background-color:;
+                #         padding: 1.5rem;
+                #         margin: 1rem auto; 
+                #         box-shadow: 0px 2px 6px rgba(0,0,0,2);
+                #         border-radius: 12px; 
+                #         max-width: 760px;          
+                        
+                # </style>
+                # """, unsafe_allow_html = True)
+                # st.markdown('<div class = "line-graph">', unsafe_allow_html = True)
+                # # st.plotly_chart(fig_time, use_container_width = False, width = 680, height = 360)
+                # st.markdown ('</div>', unsafe_allow_html = True)
+        else:
+            st.warning("Please Select a valid Numeric Column and ensure date column exists")
+                
+
 with colDD: 
     st.markdown("""
     <div class = "infographics-box">
