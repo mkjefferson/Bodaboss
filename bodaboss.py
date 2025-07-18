@@ -172,19 +172,51 @@ if numeric_col_selected != "-- Select a numeric column --":
     columns_to_display = active_cat_filters + [numeric_col_selected]
 
     display_df = filtered_df[columns_to_display]
-
+# Performance metrics
 total_sales = filtered_df['SALES'].sum() if 'SALES' in filtered_df.columns else 0
 cog = filtered_df['COG'].sum() if 'COG' in filtered_df.columns else 0
 profits = total_sales - cog
 total_qty = filtered_df['QTY'].sum() if 'QTY' in filtered_df.columns else 0
 roi =  (profits/cog)*100    
 colA1, colB1, colC1, colD1, colE1 = st.columns(5)
+
+# Creating Delta Values for the Metrics
+# -- Create data frame for previous periods 
+
+previous_start = date1 - (date2-date1)
+previous_end = date1 - timedelta(days = 1)
+
+prev_mask = (df[date_col].dt.date >= previous_start) & (df[date_col].dt.date <= previous_end)
+previous_df = df.loc[prev_mask]
+
+# Lets apply categorical filteres to the datafarm 
+for col, selection in filtered_selection.items():
+     if selection: 
+          previous_df = previous_df[previous_df[col].isin(selection)]
+
+# Calculating metrics of the previous periods 
+prev_sales = previous_df['SALES'].sum() if 'SALES' in previous_df.columns else 0
+prev_cog = previous_df['COG'].sum() if 'COG' in previous_df.columns else 0 
+prev_profits = prev_sales - prev_cog
+prev_qty = previous_df['QTY'].sum() if 'QTY' in previous_df.columns else 0 
+prev_roi = (prev_profits/prev_cog) * 100 if prev_cog != 0 else 0
+
+# computing deltas
+delta_sales = total_sales - prev_sales
+delta_cog = cog - prev_cog
+delta_profits = profits - prev_profits
+delta_qty = total_qty - prev_qty
+delta_roi = roi - prev_roi
+# Creating dataframe for the previous period 
+
 with colA1:
         st.markdown(f"""
         <div class = "metric-box">
             <h4>Sales</h4>
             <h2>Ksh. {total_sales:,.2f}</h2>
-            <p></p> 
+            <p style = 'color: {"green" if delta_sales > 0 else "red"}'>
+                {"▲" if delta_sales >= 0 else "▼"}{abs(delta_sales):,.2f}
+            </p> 
         </div>
         """, unsafe_allow_html = True)
 
@@ -193,7 +225,9 @@ with colB1:
     <div class = "metric-box">
         <h4>COG</h4>
         <h2>{cog:,.2f}</h2>
-        <p></p>
+        <p style = 'color: {"green" if delta_cog > 0 else "red"}'>
+            {"▲" if delta_cog >= 0 else "▼"}{abs(delta_cog):,.2f}
+        </p>
     </div>
     """, unsafe_allow_html = True)
 with colC1:
@@ -201,7 +235,9 @@ with colC1:
     <div class = "metric-box">
         <h4>Profits</h4>
         <h2>Ksh. {profits:,.2f}</h2>
-        <p></p>
+        <p style = 'color: {"green" if delta_profits > 0 else "red"}'>
+            {"▲" if delta_profits >= 0 else "▼"}{abs(delta_profits):,.2f}
+        </p>
     </div>
     
     """, unsafe_allow_html = True)
@@ -211,7 +247,9 @@ with colD1:
     <div class = "metric-box">
         <h4>QTY</h4>
         <h2>{total_qty}</h2>
-        <p></p>
+        <p style = 'color: {"green" if delta_qty > 0 else "red"}'>
+            {"▲" if delta_qty >= 0 else "▼"}{abs(delta_qty):,.2f}
+        </p>
     </div> 
     """, unsafe_allow_html = True)
 
@@ -220,7 +258,9 @@ with colE1:
     <div class = "metric-box">
         <h4>ROI</h4>
         <h2>{roi:,.2f}%</h2>
-        <p></p>
+        <p style = 'color:  {"green" if delta_roi > 0 else "red"}'>
+            {"▲" if delta_roi >= 0 else "▼"}{abs(delta_roi):,.2f}
+        </p>
     </div>
     
     """, unsafe_allow_html = True)
@@ -326,23 +366,6 @@ with colCC:
                         }} 
                         </style>
                 """, height = 800)
-
-                # st.markdown('<div class = "line-graph">',unsafe_allow_html = True)
-                # st.markdown("""
-                # <style>
-                # .line-graph{
-                #         background-color:;
-                #         padding: 1.5rem;
-                #         margin: 1rem auto; 
-                #         box-shadow: 0px 2px 6px rgba(0,0,0,2);
-                #         border-radius: 12px; 
-                #         max-width: 760px;          
-                        
-                # </style>
-                # """, unsafe_allow_html = True)
-                # st.markdown('<div class = "line-graph">', unsafe_allow_html = True)
-                # # st.plotly_chart(fig_time, use_container_width = False, width = 680, height = 360)
-                # st.markdown ('</div>', unsafe_allow_html = True)
         else:
             st.warning("Please Select a valid Numeric Column and ensure date column exists")
                 
